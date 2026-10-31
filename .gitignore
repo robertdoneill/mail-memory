@@ -1,0 +1,10 @@
+__pycache__/
+*.egg-info/
+.venv/
+*.sqlite
+*.sqlite-*
+*.token
+bulwark-plugin/node_modules/
+bulwark-plugin/dist/
+bulwark-plugin/*.zip
+.pytest_cache/

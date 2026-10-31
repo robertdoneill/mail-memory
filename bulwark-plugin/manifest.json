@@ -1,0 +1,62 @@
+{
+  "id": "mail-memory",
+  "name": "Mail Memory",
+  "version": "0.1.1",
+  "author": "Robert O'Neill",
+  "description": "Finds mail by what it means, not only the words in it. Search for \"the plumber who said he'd come back Thursday\" and Mail Memory adds the best-matching conversations, attachments included, to the search results. Needs a Mail Memory server, which indexes your mailbox with a small embedding model running on your own hardware: no mail leaves your servers.",
+  "type": "hook",
+  "permissions": [
+    "email:read",
+    "http:proxy"
+  ],
+  "entrypoint": "index.js",
+  "minAppVersion": "1.18.0",
+  "icon": "media/icon.svg",
+  "credentials": {
+    "mailmem": {
+      "label": "Mail Memory",
+      "scope": "user",
+      "inject": {
+        "type": "bearer"
+      }
+    }
+  },
+  "settingsSchema": {
+    "limit": {
+      "type": "number",
+      "label": "settings.limit",
+      "default": 10,
+      "min": 1,
+      "max": 20
+    },
+    "includeBulk": {
+      "type": "boolean",
+      "label": "settings.includeBulk",
+      "default": false
+    }
+  },
+  "locales": {
+    "en": {
+      "settings.limit": "Results by meaning",
+      "settings.includeBulk": "Include newsletters and notifications",
+      "source": "By meaning",
+      "connect.title": "Connect Mail Memory",
+      "connect.snippet": "Find mail by meaning: connect your Mail Memory server with a read-only API key for this account.",
+      "reconnect.title": "Reconnect Mail Memory",
+      "reconnect.snippet": "The server did not accept the API key. Connect again with a current key.",
+      "attachment": "in {name}",
+      "times": "{count} messages"
+    },
+    "de": {
+      "settings.limit": "Treffer nach Bedeutung",
+      "settings.includeBulk": "Newsletter und Benachrichtigungen einbeziehen",
+      "source": "Nach Bedeutung",
+      "connect.title": "Mail Memory verbinden",
+      "connect.snippet": "Mails nach Bedeutung finden: Verbinden Sie Ihren Mail-Memory-Server mit einem Lese-API-Schlüssel für dieses Konto.",
+      "reconnect.title": "Mail Memory erneut verbinden",
+      "reconnect.snippet": "Der Server hat den API-Schlüssel nicht angenommen. Verbinden Sie sich mit einem gültigen Schlüssel neu.",
+      "attachment": "in {name}",
+      "times": "{count} Nachrichten"
+    }
+  }
+}

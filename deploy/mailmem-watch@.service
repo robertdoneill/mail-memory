@@ -1,0 +1,18 @@
+[Unit]
+Description=Mail Memory: keep the %i index current
+After=network-online.target mailmem-embed.service
+Wants=network-online.target
+Requires=mailmem-embed.service
+
+[Service]
+User=ubuntu
+# One read-only JMAP key per account, readable only by this service user.
+EnvironmentFile=/etc/mail-memory/env
+Environment=MAILMEM_TOKEN_FILE=/etc/mail-memory/%i.token
+ExecStart=/opt/mail-memory/venv/bin/mailmem --db /srv/mail-memory/%i.sqlite watch --every 60
+Nice=10
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

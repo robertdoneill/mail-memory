@@ -1,0 +1,22 @@
+[Unit]
+Description=Mail Memory: search API for the Bulwark plugin
+After=network-online.target mailmem-embed.service docker.service
+Wants=network-online.target
+Requires=mailmem-embed.service
+
+[Service]
+User=ubuntu
+# MAILMEM_JMAP_URL=https://mail.example.com
+EnvironmentFile=/etc/mail-memory/env
+# Listens on the Docker bridge only; ufw allows Docker's private range to this port and nothing else.
+# Each request's API key is checked with the mail server, and the account it belongs to picks the index.
+ExecStart=/opt/mail-memory/venv/bin/mailmem serve --listen 172.17.0.1:8095 --accounts /etc/mail-memory/accounts.json
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/srv/mail-memory
+
+[Install]
+WantedBy=multi-user.target

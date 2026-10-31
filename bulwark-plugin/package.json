@@ -1,0 +1,15 @@
+{
+  "name": "bulwark-plugin-mail-memory",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --format=cjs --platform=neutral --outfile=dist/index.js --external:react --external:react-dom --external:react-dom/client --external:react/jsx-runtime --external:@plugin-host --external:@plugin-host/ui",
+    "package": "npm run build && cp manifest.json dist/ && cd dist && zip -X ../mail-memory.zip manifest.json index.js",
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.2"
+  }
+}

@@ -1,0 +1,16 @@
+[Unit]
+Description=Mail Memory: EmbeddingGemma embedding server (llama.cpp, localhost only)
+After=network.target
+
+[Service]
+User=ubuntu
+Environment=LD_LIBRARY_PATH=/opt/llama.cpp
+ExecStart=/opt/llama.cpp/llama-server -m /opt/models/embeddinggemma-300M-Q8_0.gguf --embedding --pooling mean \
+  --host 127.0.0.1 --port 8091 -t 4 -c 8192 -b 2048 -ub 2048 --parallel 4
+# Leave CPU for the mail server when both are busy.
+Nice=10
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

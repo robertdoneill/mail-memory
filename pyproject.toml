@@ -1,0 +1,18 @@
+[project]
+name = "mailmem"
+version = "0.1.0"
+description = "Semantic and keyword search over a JMAP mailbox, with a local embedding model"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = ["sqlite-vec==0.1.6"]
+
+[project.scripts]
+mailmem = "mailmem.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["mailmem"]
