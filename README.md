@@ -102,6 +102,12 @@ python -m pytest tests
 cd bulwark-plugin && npm test
 ```
 
+## Credits
+
+Inspired by [DigUp](https://github.com/ARahim3/DigUp), Abdur Rahim's search for files by what is in them,
+and its Linux port [ShowMe](https://github.com/Simen1331/ShowMe). Mail Memory takes the same idea, a local
+embedding model with keyword search alongside, to a mailbox.
+
 ## License
 
 MIT
