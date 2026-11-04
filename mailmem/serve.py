@@ -97,6 +97,17 @@ def snippet(text, query, width=220):
     return ("…" if start else "") + out + ("…" if start + width < len(flat) else "")
 
 
+def add_details(store, results):
+    """What a mail client needs to show each result's message as a row: recipients, folder ids, keywords,
+    preview and whether it has attachments."""
+    for r in results:
+        row = store.db.execute("SELECT recipients, mailboxes, keywords, preview, has_attachment FROM messages "
+                               "WHERE id = ?", (r["message_id"],)).fetchone()
+        if row:
+            r.update(recipients=row[0] or "", mailbox_ids=json.loads(row[1] or "[]"),
+                     keywords=json.loads(row[2] or "[]"), preview=row[3] or "", has_attachment=bool(row[4]))
+
+
 def make_handler(accounts, auth, emb):
 
     class Handler(BaseHTTPRequestHandler):
@@ -153,6 +164,7 @@ def make_handler(accounts, auth, emb):
             try:
                 res = search(store, emb, q, limit, p.get("after"), p.get("before"), p.get("from"),
                              include_bulk=p.get("bulk") == "1")
+                add_details(store, res)
             finally:
                 store.db.close()
             for r in res:

@@ -47,6 +47,8 @@ def test_search_is_per_user(tmp_path):
         hit = body["results"][0]
         assert hit["message_id"] == "1" and hit["attachment"] == "lease.docx" and "<mark>" in hit["snippet"]
         assert "passage" not in hit
+        assert hit["has_attachment"] is True and isinstance(hit["mailbox_ids"], list)
+        assert {"recipients", "keywords", "preview"} <= set(hit)
         assert _get(port, "/search?q=pe", "key-a")[1]["results"] == []
     finally:
         srv.shutdown()
