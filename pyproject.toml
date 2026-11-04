@@ -1,6 +1,6 @@
 [project]
 name = "mailmem"
-version = "0.1.0"
+version = "0.2.0"
 description = "Semantic and keyword search over a JMAP mailbox, with a local embedding model"
 readme = "README.md"
 license = "MIT"

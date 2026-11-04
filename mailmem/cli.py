@@ -3,12 +3,14 @@
 The JMAP token is read from the file named by MAILMEM_TOKEN_FILE (or MAILMEM_TOKEN), never from argv.
 """
 import argparse
+import json
 import os
 import sys
 import time
 
 from . import indexer
 from .embed import Embedder
+from .files import find_files, format_files
 from .jmap import Jmap
 from .search import format_results, search, to_json
 from .store import Store
@@ -40,13 +42,25 @@ def main(argv=None):
     s.add_argument("--from", dest="sender")
     s.add_argument("--no-bulk", action="store_true", help="leave out newsletters and notifications")
     s.add_argument("--json", action="store_true")
+    f = sub.add_parser("files", help="find attachments by type, file name, sender and date (no embeddings)")
+    f.add_argument("--type", action="append", default=[], dest="types",
+                   help="spreadsheet, document, pdf, presentation, image, archive, calendar, or an extension "
+                        "like xlsx; repeat for several")
+    f.add_argument("--name", help="words that must all be in the file name")
+    f.add_argument("--from", dest="sender")
+    f.add_argument("--after")
+    f.add_argument("--before")
+    f.add_argument("--min-size", type=int, help="bytes")
+    f.add_argument("--max-size", type=int, help="bytes")
+    f.add_argument("-n", "--limit", type=int, default=25)
+    f.add_argument("--json", action="store_true")
     sub.add_parser("attachments", help="extract attachments on messages indexed before attachment support")
     sub.add_parser("stats")
     v = sub.add_parser("serve", help="HTTP search API; each request is checked against the mail server")
     v.add_argument("--listen", default="127.0.0.1:8095")
     v.add_argument("--accounts", required=True, help='JSON file: {"user@example.com": "/path/index.sqlite"}')
     a = ap.parse_args(argv)
-    if a.cmd not in ("stats", "search") and not a.jmap:
+    if a.cmd not in ("stats", "search", "files") and not a.jmap:
         ap.error("--jmap (or MAILMEM_JMAP_URL) is required")
     if a.cmd == "serve":
         from .serve import serve
@@ -54,6 +68,14 @@ def main(argv=None):
     if not a.db:
         ap.error("--db is required")
 
+    if a.cmd == "files":
+        if not os.path.exists(a.db):
+            sys.exit(f"no index at {a.db}")
+        res = find_files(Store(a.db, readonly=True), a.types, a.name, a.sender, a.after, a.before,
+                         a.min_size, a.max_size, a.limit)
+        print(json.dumps(res, indent=1) if a.json else format_files(res))
+        print(f"({len(res)} files)", file=sys.stderr)
+        return
     store = Store(a.db)
     emb = Embedder(a.embed)
     if a.cmd == "stats":

@@ -15,10 +15,10 @@ should work.
 
 | Part | What it is |
 | --- | --- |
-| `mailmem` | Python CLI: `index`, `watch`, `search`, `attachments`, `stats`, `serve` |
+| `mailmem` | Python CLI: `index`, `watch`, `search`, `files`, `attachments`, `stats`, `serve` |
 | `mailmem serve` | HTTP search API for the Bulwark plugin. Each request is checked against the mail server |
 | `bulwark-plugin/` | Bulwark plugin that adds results "by meaning" to Bulwark's search |
-| `mailmem.mcp_ssh` | MCP server (stdio) that lets an AI agent search the index over SSH |
+| `mailmem.mcp_ssh` | MCP server (stdio) that lets an AI agent search the index and find attachments over SSH |
 | `deploy/` | systemd units for the embedding server, the indexer and the search API |
 
 ## Requirements
@@ -52,6 +52,22 @@ The embedding server defaults to `http://127.0.0.1:8091`. Set it with `--embed` 
 `index` skips newsletters and automated mail when it embeds, but it still records them. `search --no-bulk`
 leaves them out of results.
 
+## Find attachments
+
+Search by meaning finds mail that talks about a spreadsheet. `files` finds mail that carries one. It looks up
+the attachment names and types the index already records, with no embedding model, so it is exact and quick.
+
+```bash
+mailmem --db /srv/mail-memory/user.sqlite files --type spreadsheet --from judith --after 2026-08-01
+mailmem --db /srv/mail-memory/user.sqlite files --type xlsx --type csv
+mailmem --db /srv/mail-memory/user.sqlite files --name lease --type pdf --json
+```
+
+`--type` takes a group (`spreadsheet`, `document`, `pdf`, `presentation`, `image`, `archive`, `calendar`) or
+a file extension, and repeats. A group matches by extension or by MIME type, since senders often get one of
+them wrong. Images are left out unless `--type` asks for them, because most are signature logos. `--name`
+words must all be in the file name. `--min-size` and `--max-size` are in bytes.
+
 ## Search from Bulwark
 
 `mailmem serve` answers `GET /search?q=...` for the [Bulwark plugin](bulwark-plugin/). The plugin sends the
@@ -80,9 +96,10 @@ environment:
 
 ## Search from an AI agent
 
-`mailmem.mcp_ssh` is a stdio MCP server that runs on your machine. It runs `mailmem search --json` on the
-mail server over SSH, so no port is exposed. Results carry JMAP message and thread ids, which a JMAP mail MCP
-can open.
+`mailmem.mcp_ssh` is a stdio MCP server that runs on your machine. It has two tools:
+`search_mail_by_meaning` runs `mailmem search --json` and `find_attachments` runs `mailmem files --json`,
+both on the mail server over SSH, so no port is exposed. Results carry JMAP message and thread ids, which a
+JMAP mail MCP can open; attachments also carry their blob id.
 
 ```json
 {
