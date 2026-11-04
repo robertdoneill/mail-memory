@@ -5,6 +5,7 @@ server's JMAP session, and the account it belongs to picks the index: a user can
 own mail. Accounts and index files are listed in a JSON file, {"user@example.com": "/srv/index.sqlite"}.
 
   GET /search?q=...&limit=10&after=YYYY-MM-DD&before=YYYY-MM-DD&from=...&bulk=1
+  GET /files?type=xlsx&type=pdf&name=...&q=...&from=...&after=...&before=...&limit=500
   GET /health
 """
 import hashlib
@@ -20,11 +21,13 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .embed import Embedder
+from .files import find_files
 from .search import _exact_terms, search
 from .store import Store
 
 TOKEN_TTL = 600  # seconds a checked key is trusted before asking the mail server again
 MAX_LIMIT = 30
+MAX_FILES = 1000
 
 
 class Auth:
@@ -112,12 +115,8 @@ def make_handler(accounts, auth, emb):
             print(f"{self.address_string()} {self.command} {self.path.split('?')[0]} {args[1] if len(args) > 1 else ''}",
                   file=sys.stderr)
 
-        def do_GET(self):
-            url = urllib.parse.urlparse(self.path)
-            if url.path == "/health":
-                return self._send(200, {"ok": True})
-            if url.path != "/search":
-                return self._send(404, {"error": "not found"})
+        def _index(self):
+            """The caller's index file, or None after sending the error."""
             m = re.match(r"Bearer\s+(\S+)$", self.headers.get("Authorization", ""))
             if not m:
                 return self._send(401, {"error": "missing API key"})
@@ -130,7 +129,22 @@ def make_handler(accounts, auth, emb):
             db = accounts.get(user.lower())
             if not db:
                 return self._send(404, {"error": f"no Mail Memory index for {user}"})
-            p = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
+            return user, db
+
+        def do_GET(self):
+            url = urllib.parse.urlparse(self.path)
+            if url.path == "/health":
+                return self._send(200, {"ok": True})
+            if url.path not in ("/search", "/files"):
+                return self._send(404, {"error": "not found"})
+            found = self._index()
+            if not found:
+                return
+            user, db = found
+            multi = urllib.parse.parse_qs(url.query)
+            p = {k: v[0] for k, v in multi.items()}
+            if url.path == "/files":
+                return self._files(user, db, multi, p)
             q = (p.get("q") or "").strip()
             if len(q) < 3:
                 return self._send(200, {"account": user, "results": []})
@@ -144,6 +158,20 @@ def make_handler(accounts, auth, emb):
             for r in res:
                 r["snippet"] = snippet(r.pop("passage"), q)
             return self._send(200, {"account": user, "results": res})
+
+        def _files(self, user, db, multi, p):
+            try:
+                limit = max(1, min(int(p.get("limit") or 500), MAX_FILES))
+            except ValueError:
+                return self._send(400, {"error": "limit must be a number"})
+            types = [t for t in multi.get("type", []) if t.strip()][:20]
+            store = Store(db, readonly=True)
+            try:
+                res = find_files(store, types, p.get("name"), p.get("from"), p.get("after"), p.get("before"),
+                                 limit=limit, text=p.get("q"), details=True)
+            finally:
+                store.db.close()
+            return self._send(200, {"account": user, "files": res, "truncated": len(res) >= limit})
 
     return Handler
 

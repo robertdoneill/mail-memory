@@ -62,3 +62,32 @@ def test_snippet_drops_links_and_ids():
                 "that dashboard")
     assert "&lt;" not in s and "(" not in s and "<mark>Dashboard</mark>" in s and "<mark>that" not in s
     assert "INV-2041" in snippet("Invoice INV-2041 is attached", '"INV-2041"')  # short codes survive
+
+
+def test_files_endpoint(tmp_path):
+    from tests.test_files import _msg
+    db = str(tmp_path / "a.sqlite")
+    s = Store(db)
+    s.add_message(_msg(1, "2026-08-28T21:08:01Z", "Judith <j@r.org>", "RFP costs"), "Judith <j@r.org>",
+                  "Robert <r@x.com>", False, [], [],
+                  [("b1", "Cost Form.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 9, 0),
+                   ("b2", "RFP.pdf", "application/pdf", 9, 0)])
+    s.db.commit()
+    s.db.close()
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), make_handler({"a@x.com": db}, FakeAuth(), FakeEmb()))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    port = srv.server_address[1]
+    try:
+        assert _get(port, "/files?type=xlsx")[0] == 401
+        assert _get(port, "/files?type=xlsx", "key-b")[0] == 404     # a user with no index
+        code, body = _get(port, "/files?type=xlsx&type=pdf&q=judith", "key-a")
+        assert code == 200 and body["account"] == "a@x.com" and body["truncated"] is False
+        assert [f["name"] for f in body["files"]] == ["Cost Form.xlsx", "RFP.pdf"]
+        f = body["files"][0]
+        assert f["recipients"] == "Robert <r@x.com>" and f["mailbox_ids"] == ["inbox"] and f["keywords"] == []
+        assert _get(port, "/files?type=pdf&q=nobody", "key-a")[1]["files"] == []
+        code, body = _get(port, "/files?type=pdf&limit=1", "key-a")
+        assert body["truncated"] is True
+        assert _get(port, "/files?limit=lots", "key-a")[0] == 400
+    finally:
+        srv.shutdown()

@@ -62,6 +62,8 @@ FILES_TOOL = {
                      "description": "Any of: spreadsheet, document, pdf, presentation, image, archive, calendar, "
                                     "or a file extension such as xlsx or csv"},
             "name": {"type": "string", "description": "Words that must all appear in the file name"},
+            "text": {"type": "string",
+                     "description": "Words that must each appear in the file name, subject or sender"},
             "account": {"type": "string", "enum": list(ACCOUNTS), "default": DEFAULT},
             "from": {"type": "string", "description": "Sender name or address contains this"},
             "after": {"type": "string", "description": "Only mail on or after this date, YYYY-MM-DD"},
@@ -114,7 +116,7 @@ def files_command(args):
     cmd = [REMOTE, "--db", db, "files", "--json", "-n", str(min(int(args.get("limit") or 25), 100))]
     for t in types:
         cmd += ["--type", str(t)]
-    for flag, key in (("--name", "name"), ("--from", "from"), ("--after", "after"), ("--before", "before"),
+    for flag, key in (("--name", "name"), ("--text", "text"), ("--from", "from"), ("--after", "after"), ("--before", "before"),
                       ("--min-size", "min_size")):
         if args.get(key):
             cmd += [flag, str(args[key])]

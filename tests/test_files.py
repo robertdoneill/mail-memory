@@ -114,3 +114,11 @@ def test_cli_missing_index_is_not_created(tmp_path):
     with pytest.raises(SystemExit):
         cli.main(["--db", str(path), "files"])
     assert not path.exists()
+
+
+def test_text_matches_name_subject_or_sender(store):
+    assert {f["message_id"] for f in find_files(store, text="judith")} == {"m1", "m4"}
+    assert [f["name"] for f in find_files(store, text="statement")] == ["Statement May.XLS"]
+    assert [f["name"] for f in find_files(store, text="rfp final")] == ["RFP_FINAL.pdf"]
+    assert "recipients" not in find_files(store)[0]
+    assert find_files(store, details=True)[0]["mailbox_ids"] == ["inbox"]

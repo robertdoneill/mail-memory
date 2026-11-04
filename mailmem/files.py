@@ -2,6 +2,7 @@
 
 Search by meaning finds mail that talks about a spreadsheet; this finds mail that carries one.
 """
+import json
 import re
 
 # A type can be a group or a bare extension ("xlsx"). Groups match by extension and by MIME type, since
@@ -48,10 +49,15 @@ def matches_type(name, mime, want):
 
 
 def find_files(store, types=(), name=None, sender=None, after=None, before=None, min_size=None, max_size=None,
-               limit=25):
+               limit=25, text=None, details=False):
     """Attachments, newest first. Images are left out unless a type asks for them: most are signature logos
-    and inline pictures. Every word of `name` must be in the file name; `sender` is a substring of From."""
+    and inline pictures. Every word of `name` must be in the file name; every word of `text` in the file
+    name, subject or sender; `sender` is a substring of From. `details` adds what a mail client needs to
+    show the message as a row: recipients, folder ids, keywords and preview."""
     where, args = [], []
+    for w in (text or "").split():
+        where.append("(lower(a.name) LIKE ? OR lower(m.subject) LIKE ? OR lower(m.sender) LIKE ?)")
+        args += [f"%{w.lower()}%"] * 3
     for w in (name or "").split():
         where.append("lower(a.name) LIKE ?")
         args.append(f"%{w.lower()}%")
@@ -71,7 +77,8 @@ def find_files(store, types=(), name=None, sender=None, after=None, before=None,
         where.append("a.size <= ?")
         args.append(int(max_size))
     sql = ("SELECT a.name, a.type, a.size, a.blob_id, m.id, m.thread_id, m.received_at, m.subject, m.sender, "
-           "EXISTS (SELECT 1 FROM attachments x WHERE x.blob_id = a.blob_id AND x.chars > 0) "
+           "EXISTS (SELECT 1 FROM attachments x WHERE x.blob_id = a.blob_id AND x.chars > 0), "
+           "m.recipients, m.mailboxes, m.keywords, m.preview "
            "FROM attachments a JOIN messages m ON m.id = a.message_id"
            + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY m.received_at DESC, a.name")
     types = [t for t in types if t]
@@ -86,6 +93,9 @@ def find_files(store, types=(), name=None, sender=None, after=None, before=None,
         out.append({"name": fname, "type": mime, "size": row[2], "date": row[6], "subject": row[7],
                     "sender": row[8], "message_id": row[4], "thread_id": row[5], "blob_id": row[3],
                     "text_indexed": bool(row[9])})
+        if details:
+            out[-1].update({"recipients": row[10] or "", "mailbox_ids": json.loads(row[11] or "[]"),
+                            "keywords": json.loads(row[12] or "[]"), "preview": row[13] or ""})
         if len(out) >= limit:
             break
     return out

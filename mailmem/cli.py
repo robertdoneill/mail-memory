@@ -47,6 +47,7 @@ def main(argv=None):
                    help="spreadsheet, document, pdf, presentation, image, archive, calendar, or an extension "
                         "like xlsx; repeat for several")
     f.add_argument("--name", help="words that must all be in the file name")
+    f.add_argument("--text", help="words that must each be in the file name, subject or sender")
     f.add_argument("--from", dest="sender")
     f.add_argument("--after")
     f.add_argument("--before")
@@ -72,7 +73,7 @@ def main(argv=None):
         if not os.path.exists(a.db):
             sys.exit(f"no index at {a.db}")
         res = find_files(Store(a.db, readonly=True), a.types, a.name, a.sender, a.after, a.before,
-                         a.min_size, a.max_size, a.limit)
+                         a.min_size, a.max_size, a.limit, a.text)
         print(json.dumps(res, indent=1) if a.json else format_files(res))
         print(f"({len(res)} files)", file=sys.stderr)
         return
